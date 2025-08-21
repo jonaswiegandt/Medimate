@@ -19,9 +19,22 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack initialRouteName="login">
+        <Stack.Screen 
+          name="login" 
+          options={{ 
+            headerShown: false,
+            gestureEnabled: false // Verhindert, dass der User zurück navigieren kann
+          }} 
+        />
+        <Stack.Screen 
+          name="willkommen" 
+          options={{ 
+            headerShown: false,
+            gestureEnabled: false // Verhindert Zurück-Navigation nach Login
+          }} 
+        />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
