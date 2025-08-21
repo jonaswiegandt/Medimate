@@ -2,7 +2,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
 import React from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, StatusBar, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
@@ -31,9 +32,9 @@ function Header({ title }: { title: string }) {
   );
 }
 
-
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -44,10 +45,9 @@ export default function TabLayout() {
         headerShadowVisible: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: { position: "absolute" },
-          default: {},
-        }),
+        tabBarStyle: {
+          paddingBottom: insets.bottom, // Dynamischer Abstand
+        },
       }}
     >
       <Tabs.Screen
@@ -56,7 +56,11 @@ export default function TabLayout() {
           title: "Chat",
           header: () => <Header title="Chat" />,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses" size={size ?? 26} color={color} />
+            <Ionicons
+              name="chatbubble-ellipses"
+              size={size ?? 26}
+              color={color}
+            />
           ),
         }}
       />
@@ -86,7 +90,11 @@ export default function TabLayout() {
           title: "Mehr",
           header: () => <Header title="Mehr" />,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="ellipsis-horizontal-circle" size={size ?? 26} color={color} />
+            <Ionicons
+              name="ellipsis-horizontal-circle"
+              size={size ?? 26}
+              color={color}
+            />
           ),
         }}
       />
@@ -96,7 +104,7 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    height: 100,
+    height: 80 + (Platform.OS === "android" ? StatusBar.currentHeight ?? 0 : 0),
     backgroundColor: "#F1F2F3",
     flexDirection: "row",
     justifyContent: "space-between",
@@ -107,23 +115,23 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end", // Titel nach unten
   },
   right: {
-    justifyContent: "center", // Name mittig
+    justifyContent: "flex-end", // Name nach unten
   },
   headerTitle: {
     fontSize: 30,
     fontWeight: "500",
     color: "#111827",
-    paddingBottom: 10,
-  
+    marginBottom: 10,
   },
   userBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     backgroundColor: "#E5E7EB",
+    marginBottom: 10,
   },
   userName: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: "600",
     color: "#111827",
   },

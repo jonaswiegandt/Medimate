@@ -51,14 +51,18 @@ export default function MehrScreen() {
                 <Text style={[styles.rowText, { marginLeft: 8 }]}>Sprache</Text>
               </View>
             }
-            right={<Ionicons name="chevron-forward" size={18} color="#111827" />}
+            right={
+              <Ionicons name="chevron-forward" size={18} color="#111827" />
+            }
             onPress={() => {}}
             accessibilityLabel="Sprache ändern"
           />
           <Divider />
           <Row
             left={<Text style={styles.rowText}>Hoher Kontrast</Text>}
-            right={<Switch value={highContrast} onValueChange={setHighContrast} />}
+            right={
+              <Switch value={highContrast} onValueChange={setHighContrast} />
+            }
             accessibilityLabel="Hoher Kontrast umschalten"
           />
           <Divider />
@@ -80,21 +84,27 @@ export default function MehrScreen() {
         <View style={styles.card}>
           <Row
             left={<Text style={styles.rowText}>Feedback</Text>}
-            right={<Ionicons name="chevron-forward" size={18} color="#111827" />}
+            right={
+              <Ionicons name="chevron-forward" size={18} color="#111827" />
+            }
             onPress={() => {}}
             accessibilityLabel="Feedback öffnen"
           />
           <Divider />
           <Row
             left={<Text style={styles.rowText}>Datenschutz</Text>}
-            right={<Ionicons name="chevron-forward" size={18} color="#111827" />}
+            right={
+              <Ionicons name="chevron-forward" size={18} color="#111827" />
+            }
             onPress={() => {}}
             accessibilityLabel="Datenschutzhinweise öffnen"
           />
           <Divider />
           <Row
             left={<Text style={styles.rowText}>Support</Text>}
-            right={<Ionicons name="chevron-forward" size={18} color="#111827" />}
+            right={
+              <Ionicons name="chevron-forward" size={18} color="#111827" />
+            }
             onPress={() => {}}
             accessibilityLabel="Support öffnen"
           />
@@ -113,18 +123,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#EDEEEF",
     borderRadius: 16,
     paddingHorizontal: 12,
-    paddingVertical: 8,
     marginBottom: 12,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    minHeight: 48, // <--- Zeilenhöhe festlegen
+    minHeight: 60, // <--- Zeilenhöhe festlegen
   },
   rowLeft: { flex: 1 },
-  rowRight: { marginLeft: 8 },
-  rowText: { fontSize: 15, color: "#111827" },
+  rowRight: {},
+  rowText: { fontSize: 15, color: "#111827", },
   divider: {
     height: 1,
     backgroundColor: "#D6D8DB",
