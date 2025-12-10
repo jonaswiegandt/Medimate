@@ -4,34 +4,94 @@
 // IMPORTS
 // -------------------------
 
-import { Ionicons } from "@expo/vector-icons"; // Icon-Bibliothek
-import { useHeaderHeight } from "@react-navigation/elements"; // Header-Höhe für Offset
+import { Ionicons } from "@expo/vector-icons";
+import { useHeaderHeight } from "@react-navigation/elements";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, // Spinner für "KI schreibt"
-  FlatList, // performante Nachrichtenliste
-  Keyboard, // API, um Tastatur zu schließen
-  KeyboardAvoidingView, // schiebt Inhalt über Tastatur
-  StyleSheet, // Styling
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback, // Tippen außerhalb schließt Tastatur
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context"; // für Abstände unten
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // -------------------------
 // TYPES
 // -------------------------
+
+// Rolle einer Chatnachricht: entweder Nutzer*in oder KI
 type Role = "user" | "assistant";
+
+// Struktur einer Chatnachricht
 type Msg = { id: string; role: Role; text: string };
 
+// Struktur der n8n-Antwort
+type N8nResponse = {
+  answer: string;
+  usage?: any;
+  meta?: any;
+  error?: string;
+};
+
+// ----------------------------------
+// n8n Webhook Client
+// Diese Funktion sendet die Nachricht an n8n,
+// wartet auf die Antwort (ChatGPT) und gibt sie zurück.
+// ----------------------------------
+
+const N8N_WEBHOOK_URL = "https://medimate.app.n8n.cloud/webhook/fe469b09-cb03-4cc2-aae8-cdf116cf0681"; // anpassen
+
+async function callN8n(message: string, sessionId?: string, extra?: any): Promise<N8nResponse> {
+  // Timeout-Controller, falls n8n nicht antwortet
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+
+  try {
+    // Sende Nachricht an n8n
+    const res = await fetch(N8N_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      // Anfrage-Body mit Text & Metadaten
+      body: JSON.stringify({
+        message,
+        metadata: { sessionId, ...extra },
+      }),
+      signal: controller.signal,
+    });
+
+    // Antwort als JSON lesen
+    const data = (await res.json()) as N8nResponse;
+
+    // Falls Server mit Fehlermeldung antwortet
+    if (!res.ok) {
+      return { answer: "", error: data?.error || `HTTP ${res.status}` };
+    }
+
+    return data;
+  } catch (e: any) {
+    // Reiner Timeout
+    if (e?.name === "AbortError") {
+      return { answer: "", error: "Zeitüberschreitung" };
+    }
+    // Andere Netzwerkfehler
+    return { answer: "", error: e?.message || "Unbekannter Fehler" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // -------------------------
-// HILFSKOMPONENTE
+// HILFSKOMPONENTE – Tastatur korrekt verschieben
 // -------------------------
-// KeyboardShift sorgt dafür, dass Inhalte über der Tastatur bleiben.
-// keyboardVerticalOffset = Höhe des Headers
+
 type KeyboardShiftProps = { children: React.ReactNode };
 const KeyboardShift = ({ children }: KeyboardShiftProps) => {
   const headerHeight = useHeaderHeight();
@@ -40,7 +100,6 @@ const KeyboardShift = ({ children }: KeyboardShiftProps) => {
       style={{ flex: 1 }}
       behavior="padding"
       keyboardVerticalOffset={headerHeight}
-      enabled
     >
       {children}
     </KeyboardAvoidingView>
@@ -50,40 +109,55 @@ const KeyboardShift = ({ children }: KeyboardShiftProps) => {
 // -------------------------
 // HAUPTKOMPONENTE
 // -------------------------
+
 export default function ChatScreen() {
-  // State für Nachrichten
+  // messages:
+  //   Liste aller Chatnachrichten im Chat.
   const [messages, setMessages] = useState<Msg[]>([]);
-  // Eingabetext
+
+  // input:
+  //   Aktueller Text im Eingabefeld.
   const [input, setInput] = useState("");
-  // Flag: gerade wird gesendet
+
+  // isSending:
+  //   True, wenn eine Nachricht gerade an n8n gesendet wird.
   const [isSending, setIsSending] = useState(false);
-  // Flag: KI tippt (Demo)
+
+  // isTyping:
+  //   True, wenn die KI antwortet (Anzeige des "KI schreibt" Indikators).
   const [isTyping, setIsTyping] = useState(false);
-  // Höhe der Eingabeleiste
+
+  // inputBarHeight:
+  //   Höhe der Eingabeleiste, damit die Liste korrekt nach unten gescrollt wird.
   const [inputBarHeight, setInputBarHeight] = useState(56);
 
-  // Ref für FlatList zum Scrollen
+  // listRef:
+  //   Referenz auf die FlatList, um automatisch nach unten scrollen zu können.
   const listRef = useRef<FlatList<Msg> | null>(null);
 
-  // Safe-Area (z. B. iPhone Home Bar)
+  // sessionId:
+  //   Eindeutige ID der aktuellen Chat-Sitzung.
+  const [sessionId] = useState(() => `s-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+  // Safe Area Abstände
   const insets = useSafeAreaInsets();
 
   // -------------------------
   // EFFECTS
   // -------------------------
 
-  // Initiale KI-Begrüßung
+  // Initiale Begrüßungsnachricht
   useEffect(() => {
     setMessages([
       {
         id: "m0",
         role: "assistant",
-        text: "Willkommen im Chat. Stellen Sie Ihre Frage, später antwortet hier die KI über die API.",
+        text: "Willkommen! Ich bin MediMate.\n\nIch unterstütze Patient*innen dabei, medizinische Befunde besser zu verstehen. Sie können mir jederzeit Fragen zu Ihren Untersuchungsergebnissen stellen. Ich erkläre medizinische Fachbegriffe verständlich, ordne Werte ein und helfe Ihnen, die nächsten Schritte besser einzuschätzen.\n\nMediMate ersetzt keine ärztliche Beratung. Bei Unsicherheiten oder gesundheitlichen Beschwerden sollten Sie sich immer an Ihr behandelndes Ärzt*innen-Team wenden.\n\nWie kann ich Ihnen weiterhelfen?",
       },
     ]);
   }, []);
 
-  // Immer nach unten scrollen, wenn Nachrichten oder Typing-Status ändern
+  // Scrollt immer ans Ende, wenn neue Nachrichten eintreffen oder die KI schreibt
   useEffect(() => {
     const t = setTimeout(
       () => listRef.current?.scrollToEnd({ animated: true }),
@@ -96,43 +170,68 @@ export default function ChatScreen() {
   // ABGELEITETE WERTE
   // -------------------------
 
-  // Button nur aktiv, wenn Text da und nicht gesendet wird
+  // Kann der Senden-Button aktiv sein?
   const canSend = useMemo(
     () => input.trim().length > 0 && !isSending,
     [input, isSending]
   );
 
-  // Abstand am Ende der Liste: Eingabeleiste + SafeArea
+  // Padding der Liste am unteren Rand = Eingabefeld + SafeArea
   const listBottomPadding = inputBarHeight + insets.bottom + 8;
 
   // -------------------------
   // HANDLER
   // -------------------------
 
-  // Nachricht senden
+  // ------------------------------------------------------
+  // Funktion: handleSend
+  // Aufgabe:
+  //   - Fügt Nutzer-Nachricht zur Liste hinzu
+  //   - Ruft callN8n() auf
+  //   - Zeigt KI-Antwort an
+  // ------------------------------------------------------
+
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
 
+    // Sperrt den Sendebutton
     setIsSending(true);
+
+    // Eingabe löschen
     setInput("");
 
-    // Nachricht von User:in hinzufügen
+    // Nutzer-Nachricht anzeigen
     const userMsg: Msg = { id: `u-${Date.now()}`, role: "user", text };
     setMessages((prev) => [...prev, userMsg]);
+
+    // "KI schreibt"-Indikator aktivieren
     setIsTyping(true);
 
     try {
-      // Fake-Delay
-      await new Promise((r) => setTimeout(r, 700));
-      // Demoantwort der KI
-      const botMsg: Msg = {
-        id: `a-${Date.now()}`,
-        role: "assistant",
-        text: "Danke, ich habe Ihre Frage erhalten. Die KI-Antwort wird später über die API erzeugt.",
-      };
-      setMessages((prev) => [...prev, botMsg]);
+      // KI-Antwort von n8n holen
+      const resp = await callN8n(text, sessionId);
+
+      if (resp.error) {
+        // Fehlerantwort anzeigen
+        const errMsg: Msg = {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          text: `Fehler: ${resp.error}`,
+        };
+        setMessages((prev) => [...prev, errMsg]);
+      } else {
+        // Antwort von ChatGPT anzeigen
+        const botMsg: Msg = {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          text: resp.answer || "(keine Antwort erhalten)",
+        };
+        setMessages((prev) => [...prev, botMsg]);
+      }
+
     } finally {
+      // Status zurücksetzen
       setIsTyping(false);
       setIsSending(false);
     }
@@ -167,6 +266,7 @@ export default function ChatScreen() {
   // -------------------------
   // RENDER
   // -------------------------
+
   return (
     <KeyboardShift>
       <View style={styles.inner}>
@@ -184,15 +284,12 @@ export default function ChatScreen() {
                 { paddingBottom: listBottomPadding },
               ]}
               onContentSizeChange={() =>
-                setTimeout(
-                  () => listRef.current?.scrollToEnd({ animated: true }),
-                  0
-                )
+                setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 0)
               }
               keyboardShouldPersistTaps="handled"
             />
 
-            {/* Typing-Indikator */}
+            {/* KI schreibt */}
             {isTyping && (
               <View style={styles.typingBar}>
                 <ActivityIndicator />
@@ -202,9 +299,9 @@ export default function ChatScreen() {
           </View>
         </TouchableWithoutFeedback>
 
-        {/* Eingabeleiste */}
+        {/* Eingabefeld */}
         <View
-          style={[styles.inputBar, { paddingBottom: 8 }]} // nur fester Abstand
+          style={[styles.inputBar]}
           onLayout={(e) => setInputBarHeight(e.nativeEvent.layout.height)}
         >
           <TextInput
@@ -238,6 +335,7 @@ export default function ChatScreen() {
 // -------------------------
 // STYLES
 // -------------------------
+
 const styles = StyleSheet.create({
   inner: { flex: 1, backgroundColor: "#fff" },
   flex: { flex: 1 },
