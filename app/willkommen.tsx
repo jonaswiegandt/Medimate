@@ -1,4 +1,5 @@
 // app/willkommen.tsx
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
@@ -9,23 +10,34 @@ import {
   View,
 } from "react-native";
 
-type Feature = { title: string; description: string };
+type Feature = {
+  title: string;
+  description: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  route: string;
+};
 
 const FEATURES: Feature[] = [
   {
     title: "Chat",
     description:
       "Stellen Sie Fragen zu Ihren Dokumenten und erhalten Sie klare, verständliche Antworten.",
+    icon: "chatbubble-ellipses",
+    route: "/(tabs)/chat",
   },
   {
     title: "Meine Befunde",
     description:
       "Alle medizinischen Dokumente an einem Ort. Übersicht, Verlauf und Details auf einen Blick.",
+    icon: "document-text",
+    route: "/(tabs)/meineBefunde",
   },
   {
     title: "Einfach erklärt",
     description:
       "Medizinische Fachbegriffe und Befunde in verständlicher Sprache erläutert.",
+    icon: "book",
+    route: "/(tabs)/einfachErklaert",
   },
 ];
 
@@ -33,7 +45,11 @@ export default function WillkommenScreen() {
   const router = useRouter();
 
   const handleWeiterButton = () => {
-    router.replace("/(tabs)/chat"); // direkt in den Chat
+    router.replace("/(tabs)/chat");
+  };
+
+  const handleCardPress = (route: string) => {
+    router.replace(route);
   };
 
   return (
@@ -48,18 +64,34 @@ export default function WillkommenScreen() {
           </Text>
         </View>
 
-        {/* Info-Karten */}
+        {/* Info Karten */}
         <View style={styles.cards}>
           {FEATURES.map((f, idx) => (
-            <View key={idx} style={styles.card}>
-              <Text style={styles.cardTitle}>{f.title}</Text>
+            <TouchableOpacity
+              key={idx}
+              style={styles.card}
+              onPress={() => handleCardPress(f.route)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.cardHeader}>
+                <Ionicons
+                  name={f.icon}
+                  size={24}
+                  color="#007AFF"
+                  style={styles.cardIcon}
+                />
+                <Text style={styles.cardTitle}>{f.title}</Text>
+              </View>
               <Text style={styles.cardText}>{f.description}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
         {/* Hauptbutton */}
-        <TouchableOpacity style={styles.continueButton} onPress={handleWeiterButton}>
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={handleWeiterButton}
+        >
           <Text style={styles.continueButtonText}>Zum Chat</Text>
         </TouchableOpacity>
       </View>
@@ -100,11 +132,18 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  cardIcon: {
+    marginRight: 8,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#2c3e50",
-    marginBottom: 6,
   },
   cardText: { fontSize: 14, color: "#59636e", lineHeight: 20 },
   continueButton: {

@@ -293,7 +293,7 @@ export default function ChatScreen() {
             {isTyping && (
               <View style={styles.typingBar}>
                 <ActivityIndicator />
-                <Text style={styles.typingText}>KI schreibt</Text>
+                <Text style={styles.typingText}>Medimate schreibt</Text>
               </View>
             )}
           </View>

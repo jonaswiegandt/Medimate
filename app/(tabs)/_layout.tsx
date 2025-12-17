@@ -11,7 +11,7 @@ import { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
 // TODO: später aus Auth-State holen
-const userName = "Alex Beispiel";
+const userName = "Beispiel User";
 
 // Einheitlicher Header
 function Header({ title }: { title: string }) {
